@@ -1,4 +1,5 @@
-# Records messages for a set number of seconds, then writes a file
+# Saves messages in a buffer until a set number of messages, then appends to a file.
+# Also has a timeout set to write remaining messages in the buffer.
 
 import sys
 import socket
@@ -77,7 +78,7 @@ def flushBufferToFile(messageBuffer,fileName):
     print("Time to write file:" + str(f'{(endingTime - startingTime):.3f}'))
 
 def buildFilePath(withSessionID, sessionID):
-    filepath = "F1_Output_"
+    filepath = "iPhone_Output_"
     filepath = filepath + str(datetime.now().year) + "-"
     filepath = filepath + str(datetime.now().month) + "-"
     filepath = filepath + str(datetime.now().day) + "-"
@@ -91,13 +92,9 @@ def buildFilePath(withSessionID, sessionID):
     return filepath
 
 
-minimalData = False
-splitSesh = False
-for item in sys.argv:
-    if item == "min":
-        minimalData = True
-    if item == "splitsession":
-        splitSesh = True
+
+#for item in sys.argv:
+#    pass
 
 # Fake initial message
 MESSAGE = "23,567,32,4356,456,132,4353467" #init message
@@ -114,9 +111,7 @@ sessionID = None
 # Build the shared filename (path) from time this recorder starts
 filepath = buildFilePath(False, None)
 
-print("F1_Recording to this file prefix:" + filepath)
-
-
+print("iPhone_Recording to this file prefix: " + filepath)
 
 
 keepGoing = True
@@ -132,70 +127,13 @@ while keepGoing:
     except:
         print("Timeout: waiting for more data.", str(datetime.now()))
 
-    
-    # If we want to mark each message with length
-    #messageLength = len(message)
-    #messageLengthByte = messageLength.to_bytes(length=4,byteorder='little',signed=False)
-    #print(messageLength, messageLengthByte)
-    #print(message)
-    #server_socket.sendto(message, address)
-    #messageBuffer.append(messageLengthByte + message)
-    
-    # If we split files by session ID then we need to keep track of sessionID as it changes and update the file name
-    if message is not None:
-        if splitSesh:
-            newSessionID = struct.unpack('<Q', message[6:14])[0]
-            if newSessionID != sessionID:
-                print(newSessionID, sessionID)
-                # Flush buffer
-                if sessionID is not None:
-                    bufferToFlush = messageBuffer
-                    flushBufferToFile(bufferToFlush, filepath)
-                    messageBuffer = []
-                    timeOfLastFlush = time.time()
-
-                # Reset Session ID and filepath
-                sessionID = newSessionID
-                filepath = buildFilePath(splitSesh, sessionID)
-                print("Updated file name: ", filepath)
-
 
     # Just the message
-    # Meters each message if minimum data is requested
     if message is not None:
-        if minimalData:
-            #okPackets = [1,2,4,6,9,11]
-            #if message[5:6] == b'\x00':
-            #    messageBuffer.append(message)
-            if message[5:6] == b'\x01':
-                messageBuffer.append(message)
-            elif message[5:6] == b'\x02':
-                messageBuffer.append(message)
-            #elif message[5:6] == b'\x03':
-            #    messageBuffer.append(message)
-            elif message[5:6] == b'\x04':
-                messageBuffer.append(message)
-            #elif message[5:6] == b'\x05':
-            #    messageBuffer.append(message)
-            elif message[5:6] == b'\x06':
-                messageBuffer.append(message)
-            #elif message[5:6] == b'\x07':
-            #    messageBuffer.append(message)
-            #elif message[5:6] == b'\x08':
-            #    messageBuffer.append(message)
-            elif message[5:6] == b'\x09':
-                messageBuffer.append(message)
-            #elif message[5:6] == b'\n':
-            #    messageBuffer.append(message)
-            elif message[5:6] == b'\x0b':
-                messageBuffer.append(message)
-        
-        
-        else:
-            messageBuffer.append(message)
+        #print(message)
+        messageBuffer.append(message)
     
     
-
     if len(messageBuffer) >= bufferFlushSize:
         bufferToFlush = messageBuffer
         flushBufferToFile(bufferToFlush, filepath)
